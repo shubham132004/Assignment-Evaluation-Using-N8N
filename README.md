@@ -26,7 +26,7 @@ The end-to-end process is fully automated.
 ## 🖼 Workflow Diagram
 
 <img width="1701" height="729" alt="Screenshot 2025-12-04 121419" src="https://github.com/user-attachments/assets/9e80b99d-0cb9-4374-8fdd-815f78748b89" />
-🔄 Workflow Steps
+## 🔄 Workflow Steps :
 1. Telegram Trigger
 
 - Workflow begins when a ZIP file is uploaded through Telegram.
