@@ -1,0 +1,454 @@
+{
+  "name": "Assignment Evaluation",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c35b5d45-e071-43bc-8680-4d89756c90c8",
+      "name": "Telegram Trigger",
+      "webhookId": "7c27cd0f-755b-4b06-87d6-05f3d6582a82",
+      "credentials": {
+        "telegramApi": {
+          "id": "40IV6dDyh71Hh9tV",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "outputPrefix": "assignment_"
+      },
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "977b5cb5-9bd4-4833-92d7-3ceb85e7a477",
+      "name": "Compression"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "$binary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "cc97a4eb-7504-4906-b35a-b2816d5e13a6",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "={{$binary.keys()[0]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        832,
+        192
+      ],
+      "id": "f82f9a98-61b4-4b24-99c6-e81d3778752e",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Below is the raw text extracted from a PDF.\n\nYour task:\n1. Identify each Question and its corresponding Answer.\n2. Clean the text (remove page numbers, headers, footers, symbols).\n3. Split the data into Question–Answer pairs.\n4. Return the final output strictly as JSON.\n\nJSON Format to return:\n{\n  \"qa_pairs\": [\n    {\n      \"question\": \"string\",\n      \"answer\": \"string\"\n    }\n  ]\n}\n\nIMPORTANT:\n- Do not include explanations.\n- Do not include markdown.\n- Do not guess missing answers.\n- Preserve the original order.\n\nExtract from this text:\n\n\n {{ $json.text }}",
+        "options": {
+          "systemMessage": "You are an advanced AI extraction model.  \nYour job is to read long, unstructured text from PDFs and accurately extract:  \n1. Every question  \n2. Its correct answer  \n3. Maintain the original order  \n4. Output ONLY clean structured JSON without any explanation.\n\nExtraction rules:\n- A question may span multiple lines. \n- A question ends when an answer begins.\n- An answer ends when the next question begins.\n- Remove unwanted spaces, page numbers, headers, or footers.\n- Do NOT hallucinate. Only use content that actually exists in the text.\n- If a Q or A is missing, leave it empty but keep the structure.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1056,
+        192
+      ],
+      "id": "d6805ab6-97c0-46f4-a668-5d2448fd1ca7",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        944,
+        368
+      ],
+      "id": "b10a7787-50fa-4e7f-b57e-f2b00ed3f67d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "1V11Z33TKVvUTof6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        592,
+        192
+      ],
+      "id": "79b29d46-189e-4279-a562-88ba918a1c1e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "return [{\"output\" : items[0].json[\"output\"].strip(\"```json \\n\")}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        592
+      ],
+      "id": "2ae5b76a-bd8c-44aa-b142-6f9e1030dd6f",
+      "name": "Code in Python (Beta)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1485f3b3-37dc-431f-a86f-4b263577c6e4",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        592
+      ],
+      "id": "658f5009-b1d4-47b5-9928-0279015cf0db",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You will receive a JSON structure containing the student name, module name, and a list of Q&A pairs:\n\n{\n  \"student_name\": \"string\",\n  \"module_name\": \"string\",\n  \"qa_pairs\": [\n    {\n      \"question\": \"string\",\n      \"expected_answer\": \"string\",\n      \"student_answer\": \"string\"\n    }\n  ]\n}\n\nYour task:\n1. Evaluate each answer.\n2. Compare student_answer with expected_answer.\n3. Give a score out of total marks.\n4. Provide constructive feedback.\n5. At the end, calculate the student’s total score (sum of all question scores).\n6. Provide overall feedback.\n7. Follow EXACTLY this output format:\n\nAssignment Evaluation Report  \nStudent: <Student Name>  \nModule: <Module Name>\n\nQ1. <question>  \nAnswer: <student_answer>  \nScore: <X>/total marks  \nFeedback: <feedback>\n\nQ2. <question>  \nAnswer: <student_answer>  \nScore: <X>/total marks  \nFeedback: <feedback>\n\n...\n\nTotal Score: <Total>/100  \nOverall Feedback: <overall_feedback>\n\nNow evaluate the following assignment:\n\n{{ JSON.stringify($json.output.qa_pairs) }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert educational evaluator.   Your job is to grade each student's assignment using strict academic marking standards.   Evaluate answers ONLY based on the expected answer provided.  Rules: - Score each question out of 10. - Give clear, honest, and actionable feedback. - At the end, calculate total score and give an overall evaluation. - Do NOT hallucinate missing content. - If the answer is partially correct, give partial marks. - If the answer is incorrect or irrelevant, give low marks. - Output must ALWAYS follow the exact format shown in the assignment report below. - Do NOT add extra text, markdown, or explanations outside the required format.\n\ngive the output in the form of json so that in the next step I can create an objects for that \n\nand you are best at giving marks , identifying student names and module name and giving the feedback\n\nand you are also best at identifying and giving overall feedback at the end "
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        480,
+        592
+      ],
+      "id": "8fa69d08-22f2-46dc-880d-a692e98f530b",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        432,
+        784
+      ],
+      "id": "ec8bb1a8-c901-4e12-a875-bfceb0523bf3",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "1V11Z33TKVvUTof6",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "return [{\"output\" : items[0].json[\"text\"].strip(\"```json \\n\")}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        592
+      ],
+      "id": "d18d330a-9a38-4129-8d6f-1deed91d6f53",
+      "name": "Code in Python (Beta)1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "13f76ca1-1cf5-4ffa-bb16-282a6c7501e0",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        576
+      ],
+      "id": "c73bfd86-b342-4cb9-8346-9a866a382370",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Report Title :  {{ $json.output.report_title }}\nStudent Name : {{ $json.output.student_name }}\nModule Name : {{ $json.output.module_name }}\nTotal Score : {{ $json.output.total_score }} \nOverall Feedback : {{ $json.output.overall_feedback }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1232,
+        576
+      ],
+      "id": "447476d2-af16-4dcb-91cb-351573dbbcb4",
+      "name": "Send a text message",
+      "webhookId": "6e714fe1-4a4e-40b4-ae0a-bf6ae1a62f73",
+      "credentials": {
+        "telegramApi": {
+          "id": "40IV6dDyh71Hh9tV",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        576
+      ],
+      "id": "230359d8-768e-4544-888c-701073b61682",
+      "name": "Wait",
+      "webhookId": "c6e28afd-da4e-4a11-bf11-da71cf1e3106"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Compression",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compression": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7a97ec80-8d43-4649-964d-ea541820408d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "317984e8aaf62e5b90de45c2b33619f16e348b95bf33be035a825da55ecdffac"
+  },
+  "id": "4hk8cnEE7zaZEDX0",
+  "tags": []
+}
