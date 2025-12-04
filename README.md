@@ -1,5 +1,9 @@
 # 📘 Assignment Evaluation – Agentic AI Workflow 
 
+
+https://github.com/user-attachments/assets/ab700326-e063-454a-8eb9-7b984a8c4542
+
+
 ### Automating Student Assignment Evaluation Using n8n, Google Gemini & Telegram Bot 🚀  
 
 This project is an **Agentic AI-powered Assignment Evaluation System** designed to automate the evaluation of student assignments submitted in PDF format.  
