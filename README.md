@@ -29,61 +29,62 @@ The end-to-end process is fully automated.
 
 ## 🔄 Workflow Steps :
 
-1. Telegram Trigger
+### 1. Telegram Trigger
 
 - Workflow begins when a ZIP file is uploaded through Telegram.
 
-2. Compression Node – Decompress ZIP
+### 2. Compression Node – Decompress ZIP
 
 - The ZIP file is decompressed to extract all PDF files.
 
-3. Split Out Node
+### 3. Split Out Node
 
 - Splits the ZIP content into individual PDF items.
 
-4. Loop Over Items
+### 4. Loop Over Items
 
 - Processes each PDF file sequentially.
 
-5. Extract from File (PDF Mode)
+### 5. Extract from File (PDF Mode)
 
 - Extracts text from the PDF.
 
-6. AI Agent – Google Gemini Chat Model
+### 6. AI Agent – Google Gemini Chat Model
 
 - Extracted text is analyzed and converted into structured Q&A JSON.
 
-7. Python Node
+### 7. Python Node
 
 - Cleans and processes the AI-generated JSON.
 
-8. Edit Fields Node
+### 8. Edit Fields Node
 
 - Creates a structured data object.
 
-9. Basic LLM Chain – Google Gemini Chat Model
+### 9. Basic LLM Chain – Google Gemini Chat Model
 
 - Generates the full evaluation report including scores and feedback.
 
-10. Python Node
+### 10. Python Node
 
 - Formats the evaluation text for delivery.
 
-11. Edit Fields Node
+### 11. Edit Fields Node
 
 - Creates output fields for Telegram.
 
-12. Telegram Send Message Node
+### 12. Telegram Send Message Node
 
 - Sends summary of evaluation:
-
+```
 Report Title :  {{ $json.output.report_title }}
 Student Name : {{ $json.output.student_name }}
 Module Name : {{ $json.output.module_name }}
 Total Score : {{ $json.output.total_score }} 
 Overall Feedback : {{ $json.output.overall_feedback }}
+```
 
-13. Wait Node (8 Seconds)
+### 13. Wait Node (8 Seconds)
 
 Waits before evaluating the next PDF file from the loop.
 
